@@ -2,9 +2,6 @@
   "name": "gstv-gtm-agent",
   "version": "1.0.0",
   "description": "GSTV x Prosper GTM Engagement Agent",
-  "dependencies": {
-    "openai": "^4.47.0"
-  },
   "engines": {
     "node": ">=18"
   }
