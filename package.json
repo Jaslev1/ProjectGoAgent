@@ -1,8 +1,0 @@
-{
-  "name": "gstv-gtm-agent",
-  "version": "1.0.0",
-  "description": "GSTV x Prosper GTM Engagement Agent",
-  "engines": {
-    "node": ">=18"
-  }
-}
