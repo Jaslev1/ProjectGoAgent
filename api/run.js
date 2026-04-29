@@ -39,7 +39,7 @@ module.exports = async function handler(req, res) {
             content: context ? `${prompt}\n\n---\n${context}` : prompt,
           },
         ],
-        max_tokens: 2500,
+        max_tokens: 4000,
         temperature: 0.7,
       }),
     });
