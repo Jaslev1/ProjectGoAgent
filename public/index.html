@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GSTV x Prosper — GTM Agent</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -213,9 +214,9 @@
 
       <!-- File upload zone -->
       <div class="upload-zone" id="uz-t2" onclick="document.getElementById('fi-t2').click()" ondragover="dragOver(event,'uz-t2')" ondragleave="dragLeave('uz-t2')" ondrop="dropFiles(event,'t2')">
-        <input type="file" id="fi-t2" multiple accept=".txt,.md,.csv" onchange="addFiles(this,'t2')">
+        <input type="file" id="fi-t2" multiple accept=".txt,.md,.csv,.pdf" onchange="addFiles(this,'t2')">
         <div class="upload-zone-label">Drop documents here or click to browse</div>
-        <div class="upload-zone-sub">Supported: .txt, .md, .csv — for PDF/DOCX, paste text content into a .txt file</div>
+        <div class="upload-zone-sub">Supported: .pdf, .txt, .md, .csv — PDF text is extracted automatically</div>
         <div class="file-list" id="fl-t2"></div>
       </div>
 
@@ -722,6 +723,12 @@ const taskPrompts = {
   feedback_loop: "Design the 48-hour client feedback integration loop. Produce: (1) Feedback intake form — 6 questions for capturing GSTV reactions to drafts, (2) Classification system — directional, tactical, out of scope, (3) Version control naming convention, (4) Weekly sync agenda template."
 };
 
+/* ── PDF.js setup ── */
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
 /* ── File store ── */
 const fileStore = {};
 
@@ -761,6 +768,30 @@ function renderFileChips(taskId) {
 }
 
 function readFile(file) {
+  // PDF: use pdf.js to extract text page by page
+  if (file.name.toLowerCase().endsWith('.pdf')) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async e => {
+        try {
+          const typedArray = new Uint8Array(e.target.result);
+          const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+          let text = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(' ') + '\n';
+          }
+          resolve({ name: file.name, content: text.trim() || '[PDF loaded but no text could be extracted — it may be image-based]' });
+        } catch (err) {
+          reject(new Error(`PDF parse error (${file.name}): ${err.message}`));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+  // All other files: read as plain text
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => resolve({ name: file.name, content: e.target.result });
@@ -787,6 +818,7 @@ async function runAuditPerDoc(taskId, btn) {
 CRITICAL RULES:
 - Do NOT use a Strengths/Weaknesses framework. Analyse, diagnose, and assess.
 - You MUST quote or directly reference specific content, data points, language, or figures from each document to substantiate every analytical claim you make. If a document contains numbers, name them. If it contains specific language or claims, quote them. Do not generalise.
+- HALLUCINATION RULE: If a document's content appears empty, garbled, binary, or unreadable — state that clearly and explicitly under that document's heading. Do NOT fabricate plausible-sounding analysis. Write: "Document content could not be read — no analysis possible. Please re-upload as a text-readable file." and move on.
 - Write with the commercial sharpness of a senior consultant presenting findings to a CEO. No filler, no hedging.
 
 For EACH document produce analysis under these headings:
@@ -822,6 +854,7 @@ async function runAuditConsolidated(taskId, btn) {
 
 CRITICAL RULES:
 - Every analytical claim must be substantiated by specific evidence from the documents — quote language, cite data, reference specific slides, figures or structural choices.
+- HALLUCINATION RULE: If any document's content is empty, garbled or unreadable, acknowledge it explicitly (e.g. "Document 3 could not be read and has been excluded from this analysis"). Do NOT fabricate content for any document.
 - Write as a senior consultant, not as a summariser. Diagnose, challenge and provoke. This document should make GSTV's leadership uncomfortable in a productive way.
 - No bullet-point lists in the body sections. Write in rigorous analytical prose.
 
@@ -916,9 +949,16 @@ function closeResult(btn) {
 function copyResult(id, btn) {
   const el = document.getElementById(id);
   if (!el) return;
-  // Copy raw markdown text, not rendered HTML
   const raw = el.dataset.raw || el.textContent;
-  navigator.clipboard.writeText(raw).then(() => {
+  // Strip markdown symbols so copied text is clean plain text
+  const clean = raw
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*(.+?)\*\*/gs, '$1')
+    .replace(/\*([^*\n]+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  navigator.clipboard.writeText(clean).then(() => {
     btn.textContent = 'Copied!'; btn.classList.add('copied');
     setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
   });
