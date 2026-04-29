@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSTV x Prosper — GTM Agent</title>
+<style>
+  :root {
+    color-scheme: light;
+    --navy:        #2F2F4F;
+    --navy-mid:    #434371;
+    --navy-light:  #7B7B9C;
+    --teal-dark:   #557A72;
+    --teal:        #79AEA3;
+    --teal-light:  #A1C6BF;
+    --lime:        #B6EE4F;
+    --lime-dark:   #92BE3F;
+    --lime-pale:   #CCF384;
+    --brown-dark:  #4B4137;
+    --brown-light: #817A73;
+    --grey-border: #D9D9D9;
+    --bg:          #F4F5F1;
+    --white:       #FFFFFF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--navy); font-size: 13px; }
+
+  /* ── Header ── */
+  .header { background: var(--navy); color: #fff; padding: 16px 20px 14px; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  .header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+  .header-sub { font-size: 11px; color: var(--teal-light); margin-top: 2px; }
+  .header-team { font-size: 10px; color: var(--navy-light); margin-top: 5px; font-style: italic; }
+  .progress-bar-wrap { margin-top: 12px; }
+  .progress-label { font-size: 10px; color: var(--navy-light); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .progress-bar { height: 4px; background: var(--navy-mid); border-radius: 2px; }
+  .progress-fill { height: 100%; background: var(--lime); border-radius: 2px; transition: width 0.4s; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; background: var(--white); border-bottom: 2px solid var(--grey-border); padding: 0 16px; position: sticky; top: 0; z-index: 10; overflow-x: auto; }
+  .tab { padding: 10px 15px; font-size: 11px; font-weight: 700; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; color: var(--brown-light); white-space: nowrap; flex-shrink: 0; letter-spacing: 0.2px; transition: color 0.15s; }
+  .tab.active { color: var(--navy-mid); border-bottom-color: var(--lime); }
+  .tab:hover:not(.active) { color: var(--navy); }
+
+  /* ── Panels ── */
+  .panel { display: none; padding: 16px; max-width: 900px; margin: 0 auto; padding-bottom: 40px; }
+  .panel.active { display: block; }
+
+  .section-label { font-size: 10px; font-weight: 800; color: var(--teal-dark); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 9px; margin-top: 18px; }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── Task Cards ── */
+  .task-card { background: var(--white); border: 1px solid var(--grey-border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.15s; }
+  .task-card:hover { border-color: var(--teal-light); }
+  .task-card.done { opacity: 0.55; }
+  .task-card.done .task-title { text-decoration: line-through; }
+  .task-inner { padding: 12px 14px; }
+  .task-header { display: flex; align-items: flex-start; gap: 10px; }
+
+  .task-num { font-size: 11px; font-weight: 800; color: var(--white); background: var(--navy-mid); border-radius: 5px; min-width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; letter-spacing: -0.5px; }
+
+  .task-check { width: 16px; height: 16px; border: 1.5px solid var(--grey-border); border-radius: 4px; cursor: pointer; flex-shrink: 0; margin-top: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .task-check.checked { background: var(--lime-dark); border-color: var(--lime-dark); }
+  .task-check.checked::after { content: '✓'; color: #fff; font-size: 9px; font-weight: 700; }
+
+  .task-meta { flex: 1; min-width: 0; }
+  .task-title { font-size: 12px; font-weight: 700; line-height: 1.4; color: var(--navy); }
+  .task-desc { font-size: 11px; color: var(--brown-light); margin-top: 4px; line-height: 1.55; }
+
+  .task-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+  .tag { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .tag-day  { background: #f0f0ec; color: var(--brown-dark); }
+  .tag-ws   { background: #ece9f5; color: var(--navy-mid); }
+  .tag-owner{ background: #e8f4f2; color: var(--teal-dark); }
+
+  .task-output { font-size: 11px; color: var(--brown-light); margin-top: 7px; border-left: 3px solid var(--lime); padding-left: 8px; line-height: 1.4; }
+  .task-output strong { color: var(--navy); }
+  .task-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* ── Buttons ── */
+  .btn { border: none; border-radius: 5px; padding: 5px 12px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px; }
+  .btn-run       { background: var(--navy-mid); color: #fff; }
+  .btn-run:hover { background: var(--navy); }
+  .btn-run:disabled { background: var(--navy-light); cursor: not-allowed; }
+  .btn-secondary       { background: var(--bg); color: var(--navy); border: 1px solid var(--grey-border); }
+  .btn-secondary:hover { background: #eaeae8; }
+  .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-email       { background: #edf7f5; color: var(--teal-dark); border: 1px solid var(--teal-light); }
+  .btn-email:hover { background: #daf0ec; }
+  .btn-email:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-upload      { background: #f5f8e8; color: var(--lime-dark); border: 1px solid var(--lime-pale); }
+  .btn-upload:hover{ background: #eef5d4; }
+  .btn-copy-sm     { background: var(--bg); color: var(--brown-light); border: 1px solid var(--grey-border); font-size: 10px; }
+  .btn-copy-sm.copied { color: var(--teal-dark); border-color: var(--teal-light); }
+
+  /* ── File Upload Zone ── */
+  .upload-zone { border: 2px dashed var(--teal-light); border-radius: 7px; padding: 14px 16px; margin-top: 10px; background: #f7fbfa; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--teal); background: #eef7f5; }
+  .upload-zone input[type=file] { display: none; }
+  .upload-zone-label { font-size: 11px; color: var(--teal-dark); font-weight: 600; }
+  .upload-zone-sub { font-size: 10px; color: var(--brown-light); margin-top: 3px; }
+  .file-list { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+  .file-chip { background: var(--white); border: 1px solid var(--teal-light); border-radius: 4px; padding: 3px 8px; font-size: 10px; color: var(--teal-dark); font-weight: 600; display: flex; align-items: center; gap: 5px; }
+  .file-chip-remove { cursor: pointer; color: var(--navy-light); font-size: 12px; line-height: 1; }
+  .file-chip-remove:hover { color: #c00; }
+
+  /* ── Result Pane ── */
+  .result-pane { display: none; border-top: 2px solid var(--lime-pale); }
+  .result-pane.visible { display: block; }
+  .result-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #f8fbf3; border-bottom: 1px solid var(--lime-pale); }
+  .result-label { font-size: 10px; font-weight: 800; color: var(--lime-dark); text-transform: uppercase; letter-spacing: 0.5px; }
+  .result-actions { display: flex; gap: 6px; }
+  .result-close { background: none; border: none; color: var(--brown-light); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; }
+  .result-close:hover { color: var(--navy); }
+  .result-body { padding: 14px; max-height: 520px; overflow-y: auto; }
+  .result-text { font-size: 12px; line-height: 1.8; color: var(--navy); word-break: break-word; }
+  .result-text strong { color: var(--navy); font-weight: 700; }
+  .result-text .rh1 { font-size: 13px; font-weight: 800; color: var(--navy); display: block; margin-top: 18px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .result-text .rh2 { font-size: 12px; font-weight: 800; color: var(--navy-mid); display: block; margin-top: 14px; margin-bottom: 4px; }
+  .result-text .rh3 { font-size: 12px; font-weight: 700; color: var(--teal-dark); display: block; margin-top: 10px; margin-bottom: 3px; }
+  .result-text p { margin-bottom: 10px; }
+  .result-text br + br { display: none; }
+
+  .loading-wrap { display: flex; align-items: center; gap: 9px; padding: 18px 0; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--grey-border); border-top-color: var(--navy-mid); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 11px; color: var(--brown-light); }
+  .error-text { font-size: 11px; color: #c00; background: #fff5f5; padding: 8px 10px; border-radius: 5px; border-left: 3px solid #c00; }
+
+  /* ── Always-On ── */
+  .always-on-card { background: var(--white); border: 1px solid var(--grey-border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .ao-inner { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; }
+  .ao-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lime); flex-shrink: 0; margin-top: 5px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .ao-content { flex: 1; }
+
+  /* ── Context boxes ── */
+  .context-box { background: var(--white); border: 1px solid var(--grey-border); border-radius: 8px; padding: 14px; margin-bottom: 10px; font-size: 11px; line-height: 1.65; color: #444; }
+  .context-box h3 { font-size: 11px; font-weight: 800; color: var(--navy); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .context-box ul { padding-left: 16px; }
+  .context-box li { margin-bottom: 4px; }
+
+  .phase-output { background: #f8fbf3; border: 1px solid var(--lime-pale); border-radius: 6px; padding: 11px 14px; margin-top: 6px; }
+  .phase-output h4 { font-size: 10px; font-weight: 800; color: var(--lime-dark); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+  .phase-output ol { padding-left: 16px; }
+  .phase-output li { font-size: 11px; color: var(--navy); margin-bottom: 3px; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>GSTV x Prosper — GTM Engagement Agent</h1>
+      <div class="header-sub">April–May 2026 &nbsp;·&nbsp; 10–12 working days &nbsp;·&nbsp; Phase 1 and Phase 2</div>
+      <div class="header-team">Engagement Partners: Warren Griffiths and Jason Levin</div>
+    </div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label"><span id="prog-label">0 of 19 tasks complete</span><span id="prog-pct">0%</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPanel('p1',this)">Phase 1 — Diagnosis</div>
+  <div class="tab" onclick="showPanel('p2',this)">Phase 2 — Build</div>
+  <div class="tab" onclick="showPanel('ao',this)">Always-On</div>
+  <div class="tab" onclick="showPanel('ctx',this)">Engagement Brief</div>
+</div>
+
+<!-- ═══════════════ PHASE 1 ═══════════════ -->
+<div class="panel active" id="panel-p1">
+
+  <div class="section-label">Alignment</div>
+
+  <!-- Task 1 -->
+  <div class="task-card" id="tc-t1">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">01</div>
+        <div class="task-check" onclick="toggleTask('t1')"></div>
+        <div class="task-meta">
+          <div class="task-title">Kickoff — define success criteria and confirm access to materials</div>
+          <div class="task-desc">Prosper and Partners will work in close collaboration with GSTV's executive team, particularly Scott and Rob, under the leadership of Engagement Partners Warren Griffiths and Jason Levin.</div>
+          <div class="task-tags"><span class="tag tag-day">Day 1</span><span class="tag tag-ws">Alignment</span><span class="tag tag-owner">GSTV + Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Working brief and hypothesis list</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t1','kickoff',this)">Run: Working Brief</button>
+        <button class="btn btn-secondary" onclick="runTask('t1','hypotheses',this)">Run: Hypothesis List</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t1"></div>
+  </div>
+
+  <div class="section-label">Internal Audit</div>
+
+  <!-- Task 2 — with file upload -->
+  <div class="task-card" id="tc-t2">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">02</div>
+        <div class="task-check" onclick="toggleTask('t2')"></div>
+        <div class="task-meta">
+          <div class="task-title">Audit current decks, packaging and positioning</div>
+          <div class="task-desc">Drop GSTV materials below. The agent will produce a precise per-document analysis and a consolidated audit paper across all uploads.</div>
+          <div class="task-tags"><span class="tag tag-day">Days 1–2</span><span class="tag tag-ws">Internal</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Per-document analysis and consolidated current state GTM map</div>
+        </div>
+      </div>
+
+      <!-- File upload zone -->
+      <div class="upload-zone" id="uz-t2" onclick="document.getElementById('fi-t2').click()" ondragover="dragOver(event,'uz-t2')" ondragleave="dragLeave('uz-t2')" ondrop="dropFiles(event,'t2')">
+        <input type="file" id="fi-t2" multiple accept=".txt,.md,.csv" onchange="addFiles(this,'t2')">
+        <div class="upload-zone-label">Drop documents here or click to browse</div>
+        <div class="upload-zone-sub">Supported: .txt, .md, .csv — for PDF/DOCX, paste text content into a .txt file</div>
+        <div class="file-list" id="fl-t2"></div>
+      </div>
+
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runAuditPerDoc('t2',this)">Run: Per-Doc Analysis</button>
+        <button class="btn btn-secondary" onclick="runAuditConsolidated('t2',this)">Run: Consolidated Audit</button>
+        <button class="btn btn-upload" onclick="runTask('t2','gtm_map',this)">Run: GTM Map (no files)</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t2"></div>
+  </div>
+
+  <!-- Task 3 -->
+  <div class="task-card" id="tc-t3">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">03</div>
+        <div class="task-check" onclick="toggleTask('t3')"></div>
+        <div class="task-meta">
+          <div class="task-title">Map sales flow, pipeline and win/loss patterns</div>
+          <div class="task-tags"><span class="tag tag-day">Days 1–2</span><span class="tag tag-ws">Internal</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Sales funnel and friction points</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t3','salesfunnel',this)">Run: Sales Funnel Map</button>
+        <button class="btn btn-secondary" onclick="runTask('t3','winloss',this)">Run: Win/Loss Framework</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t3"></div>
+  </div>
+
+  <div class="section-label">Market Intelligence</div>
+
+  <!-- Task 4 -->
+  <div class="task-card" id="tc-t4">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">04</div>
+        <div class="task-check" onclick="toggleTask('t4')"></div>
+        <div class="task-meta">
+          <div class="task-title">Competitor and category positioning scan</div>
+          <div class="task-tags"><span class="tag tag-day">Days 2–3</span><span class="tag tag-ws">Market</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Competitive landscape summary</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t4','competitive',this)">Run: Competitive Landscape</button>
+        <button class="btn btn-secondary" onclick="runTask('t4','positioning_matrix',this)">Run: Positioning Matrix</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t4"></div>
+  </div>
+
+  <!-- Task 5 -->
+  <div class="task-card" id="tc-t5">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">05</div>
+        <div class="task-check" onclick="toggleTask('t5')"></div>
+        <div class="task-meta">
+          <div class="task-title">Conduct 3–4 GSTV sales team interviews</div>
+          <div class="task-desc">A 10–15 question discussion guide will be drafted and pre-sent to interviewees ahead of each session.</div>
+          <div class="task-tags"><span class="tag tag-day">Days 2–4</span><span class="tag tag-ws">Market</span><span class="tag tag-owner">GSTV + Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Internal approach perspective, integrated into GTM map</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t5','sales_interview_guide',this)">Run: Discussion Guide</button>
+        <button class="btn btn-secondary" onclick="runTask('t5','sales_synthesis',this)">Run: Synthesis Template</button>
+        <button class="btn btn-email" onclick="openOutlook('sales_outreach')">Open in Outlook</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t5"></div>
+  </div>
+
+  <!-- Task 6 -->
+  <div class="task-card" id="tc-t6">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">06</div>
+        <div class="task-check" onclick="toggleTask('t6')"></div>
+        <div class="task-meta">
+          <div class="task-title">Conduct 3–4 buyer/agency interviews</div>
+          <div class="task-desc">A 10–15 question discussion guide will be drafted and pre-sent to interviewees ahead of each session.</div>
+          <div class="task-tags"><span class="tag tag-day">Days 2–4</span><span class="tag tag-ws">Market</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Outside-in perspective notes, integrated into GTM map</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t6','buyer_interview_guide',this)">Run: Discussion Guide</button>
+        <button class="btn btn-secondary" onclick="runTask('t6','buyer_synthesis',this)">Run: Synthesis Template</button>
+        <button class="btn btn-email" onclick="openOutlook('buyer_outreach')">Open in Outlook</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t6"></div>
+  </div>
+
+  <div class="section-label">Diagnosis</div>
+
+  <!-- Task 7 -->
+  <div class="task-card" id="tc-t7">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">07</div>
+        <div class="task-check" onclick="toggleTask('t7')"></div>
+        <div class="task-meta">
+          <div class="task-title">Identify planning gaps and budget misalignment</div>
+          <div class="task-tags"><span class="tag tag-day">Days 3–5</span><span class="tag tag-ws">Diagnosis</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Planning inclusion/exclusion map</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t7','planning_gaps',this)">Run: Planning Gap Map</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t7"></div>
+  </div>
+
+  <!-- Task 8 -->
+  <div class="task-card" id="tc-t8">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">08</div>
+        <div class="task-check" onclick="toggleTask('t8')"></div>
+        <div class="task-meta">
+          <div class="task-title">Define top 5 commercial and narrative gaps</div>
+          <div class="task-tags"><span class="tag tag-day">Days 3–4</span><span class="tag tag-ws">Diagnosis</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Problem statement aligned to SOW gaps</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t8','problem_statement',this)">Run: Problem Statement</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t8"></div>
+  </div>
+
+  <div class="section-label">Synthesis</div>
+
+  <!-- Task 9 -->
+  <div class="task-card" id="tc-t9">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">09</div>
+        <div class="task-check" onclick="toggleTask('t9')"></div>
+        <div class="task-meta">
+          <div class="task-title">Define "what winning looks like" — budget, role, positioning</div>
+          <div class="task-tags"><span class="tag tag-day">Days 4–6</span><span class="tag tag-ws">Synthesis</span><span class="tag tag-owner">Prosper + GSTV</span></div>
+          <div class="task-output"><strong>Output:</strong> Winning definition</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t9','winning',this)">Run: Winning Definition</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t9"></div>
+  </div>
+
+  <!-- Task 10 -->
+  <div class="task-card" id="tc-t10">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">10</div>
+        <div class="task-check" onclick="toggleTask('t10')"></div>
+        <div class="task-meta">
+          <div class="task-title">Build future-state GTM blueprint</div>
+          <div class="task-tags"><span class="tag tag-day">Days 4–6</span><span class="tag tag-ws">Synthesis</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> GTM blueprint — Phase 1 primary deliverable (GSTV sign-off required)</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t10','blueprint',this)">Run: GTM Blueprint</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t10"></div>
+  </div>
+
+  <div class="phase-output">
+    <h4>Phase 1 Outputs</h4>
+    <ol><li>Clear articulation of what is broken</li><li>Definition of what winning looks like</li><li>Future-state GTM blueprint</li></ol>
+  </div>
+</div>
+
+<!-- ═══════════════ PHASE 2 ═══════════════ -->
+<div class="panel" id="panel-p2">
+
+  <div class="section-label">Proposition</div>
+
+  <!-- Task 11 -->
+  <div class="task-card" id="tc-t11">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">11</div>
+        <div class="task-check" onclick="toggleTask('t11')"></div>
+        <div class="task-meta">
+          <div class="task-title">Draft core positioning shift — format to outcomes</div>
+          <div class="task-tags"><span class="tag tag-day">Days 5–6</span><span class="tag tag-ws">Proposition</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Revised value proposition and master narrative</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t11','positioning_shift',this)">Run: Value Proposition</button>
+        <button class="btn btn-secondary" onclick="runTask('t11','before_after',this)">Run: Before/After Language</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t11"></div>
+  </div>
+
+  <!-- Task 12 -->
+  <div class="task-card" id="tc-t12">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">12</div>
+        <div class="task-check" onclick="toggleTask('t12')"></div>
+        <div class="task-meta">
+          <div class="task-title">Define core hooks and sales angles</div>
+          <div class="task-tags"><span class="tag tag-day">Days 5–6</span><span class="tag tag-ws">Proposition</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Hook set</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t12','hooks',this)">Run: Hook Set</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t12"></div>
+  </div>
+
+  <div class="section-label">Messaging</div>
+
+  <!-- Task 13 -->
+  <div class="task-card" id="tc-t13">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">13</div>
+        <div class="task-check" onclick="toggleTask('t13')"></div>
+        <div class="task-meta">
+          <div class="task-title">Build messaging architecture — pillars and proof points</div>
+          <div class="task-tags"><span class="tag tag-day">Days 6–7</span><span class="tag tag-ws">Messaging</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Messaging framework</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t13','messaging_arch',this)">Run: Messaging Architecture</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t13"></div>
+  </div>
+
+  <!-- Task 14 -->
+  <div class="task-card" id="tc-t14">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">14</div>
+        <div class="task-check" onclick="toggleTask('t14')"></div>
+        <div class="task-meta">
+          <div class="task-title">Craft category-relevant language and talking points</div>
+          <div class="task-tags"><span class="tag tag-day">Days 6–7</span><span class="tag tag-ws">Messaging</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Category messaging variants (QSR, Retail, CPG, Financial Services, Auto)</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t14','category_messaging',this)">Run: Category Variants</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t14"></div>
+  </div>
+
+  <div class="section-label">Sales Logic</div>
+
+  <!-- Task 15 -->
+  <div class="task-card" id="tc-t15">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">15</div>
+        <div class="task-check" onclick="toggleTask('t15')"></div>
+        <div class="task-meta">
+          <div class="task-title">Identify key objections, buying barriers and rebuttal logic</div>
+          <div class="task-tags"><span class="tag tag-day">Days 7–8</span><span class="tag tag-ws">Sales Logic</span><span class="tag tag-owner">Prosper + GSTV</span></div>
+          <div class="task-output"><strong>Output:</strong> Objection handling list</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t15','objections',this)">Run: Objection Handler</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t15"></div>
+  </div>
+
+  <div class="section-label">Validation and Refinement</div>
+
+  <!-- Task 16 -->
+  <div class="task-card" id="tc-t16">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">16</div>
+        <div class="task-check" onclick="toggleTask('t16')"></div>
+        <div class="task-meta">
+          <div class="task-title">Test narrative against real briefs and categories</div>
+          <div class="task-tags"><span class="tag tag-day">Days 8–9</span><span class="tag tag-ws">Validation</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Stress-test feedback</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t16','stresstest',this)">Run: Stress-Test</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t16"></div>
+  </div>
+
+  <!-- Task 17 -->
+  <div class="task-card" id="tc-t17">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">17</div>
+        <div class="task-check" onclick="toggleTask('t17')"></div>
+        <div class="task-meta">
+          <div class="task-title">Simplify and tighten narrative for sales use</div>
+          <div class="task-tags"><span class="tag tag-day">Days 8–9</span><span class="tag tag-ws">Refinement</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Narrative v2</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t17','narrative_v2',this)">Run: Narrative v2</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t17"></div>
+  </div>
+
+  <div class="section-label">Finalization</div>
+
+  <!-- Task 18 -->
+  <div class="task-card" id="tc-t18">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">18</div>
+        <div class="task-check" onclick="toggleTask('t18')"></div>
+        <div class="task-meta">
+          <div class="task-title">Finalize master narrative and messaging framework</div>
+          <div class="task-tags"><span class="tag tag-day">Days 9–10</span><span class="tag tag-ws">Finalization</span><span class="tag tag-owner">Prosper</span></div>
+          <div class="task-output"><strong>Output:</strong> Board-ready narrative</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t18','final_narrative',this)">Run: Board-Ready Narrative</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t18"></div>
+  </div>
+
+  <!-- Task 19 -->
+  <div class="task-card" id="tc-t19">
+    <div class="task-inner">
+      <div class="task-header">
+        <div class="task-num">19</div>
+        <div class="task-check" onclick="toggleTask('t19')"></div>
+        <div class="task-meta">
+          <div class="task-title">Package all outputs for GSTV review and sign-off</div>
+          <div class="task-tags"><span class="tag tag-day">Days 9–10</span><span class="tag tag-ws">Finalization</span><span class="tag tag-owner">Prosper + GSTV</span></div>
+          <div class="task-output"><strong>Output:</strong> Complete deliverables pack (GSTV sign-off required)</div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-run" onclick="runTask('t19','package',this)">Run: Deliverables Pack</button>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-t19"></div>
+  </div>
+
+  <div class="phase-output">
+    <h4>Phase 2 Outputs</h4>
+    <ol><li>Board-ready master narrative</li><li>Messaging architecture</li><li>Objection handling framework</li></ol>
+  </div>
+</div>
+
+<!-- ═══════════════ ALWAYS ON ═══════════════ -->
+<div class="panel" id="panel-ao">
+  <p style="font-size:11px;color:var(--brown-light);margin-bottom:14px;line-height:1.6;">These workstreams run continuously across both phases throughout the engagement.</p>
+
+  <div class="always-on-card">
+    <div class="ao-inner">
+      <div class="ao-dot"></div>
+      <div class="ao-content">
+        <div class="task-title">Build proof points — attention, proximity to purchase, outcomes</div>
+        <div class="task-tags" style="margin-top:5px;"><span class="tag tag-ws">Evidence</span><span class="tag tag-owner">Analyst</span></div>
+        <div class="task-output" style="margin-top:6px;"><strong>Output:</strong> Evidence bank</div>
+        <div class="task-actions" style="margin-top:9px;">
+          <button class="btn btn-run" onclick="runTask('ao1','evidence_bank',this)">Run: Evidence Bank</button>
+        </div>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-ao1"></div>
+  </div>
+
+  <div class="always-on-card">
+    <div class="ao-inner">
+      <div class="ao-dot"></div>
+      <div class="ao-content">
+        <div class="task-title">Identify and prioritize 3–5 target verticals</div>
+        <div class="task-tags" style="margin-top:5px;"><span class="tag tag-ws">Categories</span><span class="tag tag-owner">Strategy Lead</span></div>
+        <div class="task-output" style="margin-top:6px;"><strong>Output:</strong> Priority category list</div>
+        <div class="task-actions" style="margin-top:9px;">
+          <button class="btn btn-run" onclick="runTask('ao2','verticals',this)">Run: Category Prioritization</button>
+        </div>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-ao2"></div>
+  </div>
+
+  <div class="always-on-card">
+    <div class="ao-inner">
+      <div class="ao-dot"></div>
+      <div class="ao-content">
+        <div class="task-title">Continuous client feedback integration — 48-hour loop</div>
+        <div class="task-tags" style="margin-top:5px;"><span class="tag tag-ws">Inputs</span><span class="tag tag-owner">Strategy Lead</span></div>
+        <div class="task-output" style="margin-top:6px;"><strong>Output:</strong> Iterated outputs</div>
+        <div class="task-actions" style="margin-top:9px;">
+          <button class="btn btn-run" onclick="runTask('ao3','feedback_loop',this)">Run: Feedback Loop Design</button>
+        </div>
+      </div>
+    </div>
+    <div class="result-pane" id="rp-ao3"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ BRIEF ═══════════════ -->
+<div class="panel" id="panel-ctx">
+  <div class="context-box">
+    <h3>Engagement Overview</h3>
+    GSTV x Prosper and Partners GTM strategy and narrative refresh. GSTV recently acquired by MidOcean Partners (PE). Sales declining after 5–6 years of strong growth. Core problem: narrative-market fit failure, not product-market fit failure. Led by Engagement Partners Warren Griffiths and Jason Levin, working in close collaboration with GSTV's executive team, particularly Scott and Rob.
+  </div>
+  <div class="context-box">
+    <h3>Core Problem</h3>
+    <ul>
+      <li>Historical CTV platform narrative no longer sufficient to win</li>
+      <li>CTV supply glut driving pricing pressure across the category</li>
+      <li>Agency buying behavior shifting to outcome-based compensation</li>
+      <li>Retail media and attention metrics rising in importance</li>
+      <li>GSTV excluded from planning conversations — narrative is the unlock</li>
+    </ul>
+  </div>
+  <div class="context-box">
+    <h3>Strategic Direction</h3>
+    <ul>
+      <li>Reframe: from "TV at the pump" to national video platform, retail media amplifier, outcome-driven channel</li>
+      <li>Lead with incremental reach, high-attention environment and retail impact</li>
+      <li>Category-specific narratives: QSR, Retail, CPG, Financial Services, Auto</li>
+      <li>Build a sales enablement function — currently absent</li>
+      <li>Retail media partnerships: CVS Media, Walmart Connect, Roundel</li>
+    </ul>
+  </div>
+  <div class="context-box">
+    <h3>Key Stakeholders</h3>
+    <ul>
+      <li>GSTV leadership: Scott and Rob (executive sponsors)</li>
+      <li>Prosper and Partners: Warren Griffiths and Jason Levin (Engagement Partners)</li>
+      <li>GSTV marketing and sales teams: day-to-day collaborators</li>
+    </ul>
+  </div>
+  <div class="context-box">
+    <h3>Open Questions</h3>
+    <ul>
+      <li>Agreed budget range for the engagement</li>
+      <li>Success metrics: revenue lift, win rate, pipeline growth</li>
+      <li>Which categories to prioritize first</li>
+      <li>Internal resources available full-time</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const CTX = "GSTV engagement context: GSTV is a video platform with screens at fuel and convenience retail locations nationwide, recently acquired by MidOcean Partners (PE). Sales have declined after 5-6 years of strong growth. Core problem is narrative-market fit failure — the existing CTV video platform story is stale given CTV supply glut, outcome-based agency buying, and the rise of retail media. Strategic direction: reframe GSTV as a national video platform, retail media amplifier, and outcome-driven channel. Priority verticals: QSR, Retail, CPG, Financial Services, Auto. Prosper and Partners is the embedded strategic partner on a 10-12 day engagement. Engagement Partners: Warren Griffiths and Jason Levin. Key GSTV executives: Scott and Rob.";
+
+/* ── Prompt library ── */
+const taskPrompts = {
+  kickoff: "Write a concise, board-ready working brief for the GSTV x Prosper GTM engagement Day 1 kickoff. Cover: engagement objective (2-3 sentences), strategic context, scope of Phase 1 Diagnosis and Phase 2 Build, working model, key deliverables with timeline, and success criteria. Prosper and Partners will work in close collaboration with GSTV's executive team, particularly Scott and Rob, under the leadership of Engagement Partners Warren Griffiths and Jason Levin. Write for GSTV leadership. Use clean paragraphs.",
+  hypotheses: "Generate 7 testable hypotheses about what is broken in GSTV's go-to-market. Format: HYPOTHESIS — [statement] | WHAT WE EXPECT TO FIND — [observable evidence] | IMPLICATION IF TRUE — [what changes in the GTM approach]. Cover: narrative positioning, sales motion, category relevance, measurement gaps, agency perception, budget exclusion patterns, and commercial packaging.",
+  gtm_audit: "Build a structured GTM audit framework for reviewing GSTV's current decks and materials. Six dimensions: (1) Narrative clarity and differentiation, (2) Positioning vs competitors, (3) Packaging and offer structure, (4) Evidence and proof points, (5) Sales materials quality, (6) Category relevance. For each: what to look for, what good looks like, what broken looks like, and a 1-5 scoring rubric.",
+  gtm_map: "Draft a current-state GTM map for GSTV showing: (1) Current narrative and positioning claims GSTV is likely making, (2) How these land with agencies and buyers today, (3) Where the narrative breaks down vs market reality, (4) The gap between current state and where GSTV needs to be. Be specific and diagnostic.",
+  salesfunnel: "Build a detailed sales funnel map for GSTV showing: each stage from prospecting through close and renewal, the narrative GSTV is likely deploying at each stage, friction points and where deals are breaking down, and specific questions to validate each friction hypothesis.",
+  winloss: "Build a win/loss analysis framework for GSTV. Produce: (1) 8 key diagnostic questions for the sales team, (2) patterns to expect given GSTV's narrative challenges, (3) a coding system for categorizing win/loss themes, and (4) a one-page synthesis template.",
+  competitive: "Conduct a competitive scan for GSTV. Analyze: (1) direct video and DOOH competitors — what they lead with and where GSTV is displaced, (2) how the CTV category narrative has shifted given supply glut, (3) how retail media networks (CVS Media, Walmart Connect, Roundel) are positioning, (4) GSTV's defensible whitespace. Be specific about real competitors and category dynamics.",
+  positioning_matrix: "Build a positioning matrix for GSTV vs key competitors across axes that matter to agency buyers: Format vs Outcomes orientation, Reach vs Precision, Awareness vs Performance, Generic vs Retail-contextual. Show where GSTV sits today, where competitors sit, and where GSTV should reposition.",
+  sales_interview_guide: "Write a 12-question discussion guide for GSTV sales team interviews. Include: a 2-sentence intro script, questions covering — current narrative, objections heard most, deals lost and why, gaps in materials, what would make them more effective. Include probing follow-ups for each. Format for a 45-minute session.",
+  sales_synthesis: "Build a synthesis template for coding themes across 3-4 GSTV sales team interviews. Include: theme coding matrix covering narrative gaps, objection patterns, sales motion issues, competitive displacement, and materials gaps; a running tally format; and a one-page findings summary template.",
+  buyer_interview_guide: "Write a 12-question discussion guide for buyer and agency interviews about GSTV. Include: context-setting intro, questions covering — current perception of GSTV, inclusion/exclusion from plans, what narrative or evidence would change their view, GSTV vs alternatives, and what role they'd want GSTV to play. Include probing follow-ups.",
+  buyer_synthesis: "Build a synthesis template for GSTV buyer and agency interviews. Capture: perception scores per buyer, key inclusion and exclusion triggers, narrative elements that land vs fall flat, evidence gaps, and buyer-specific recommendations.",
+  planning_gaps: "Build GSTV's planning inclusion/exclusion map covering: (1) scenarios where GSTV is included and why, (2) scenarios where GSTV is excluded with root cause for each, (3) budget misalignment patterns, (4) for each exclusion, the specific narrative or commercial change that would shift GSTV from out to in.",
+  problem_statement: "Define GSTV's top 5 commercial and narrative gaps as a structured problem statement. For each gap: THE GAP (one sentence), SYMPTOMS, ROOT CAUSE HYPOTHESIS, GTM IMPLICATION. Span: narrative positioning, sales motion, category relevance, measurement, and commercial packaging.",
+  winning: "Write a 'What Winning Looks Like' definition for GSTV. Cover: (1) the budget role GSTV should play in agency plans and why, (2) the positioning claim GSTV can credibly own, (3) what a healthy win rate looks like by category, (4) leading indicators that will tell us the narrative is working, (5) narrative conditions required to get there.",
+  blueprint: "Build GSTV's future-state GTM blueprint — the Phase 1 primary deliverable. Structure: (1) Strategic narrative direction and why it wins, (2) Target buyer segments and category priorities, (3) GSTV's role in the planning funnel, (4) Three key messaging pillars, (5) Required sales enablement investments, (6) Path from current to future state.",
+  positioning_shift: "Draft GSTV's core positioning shift from format-led to outcomes-led. Produce: (1) New value proposition — one sentence, no jargon, (2) 3-paragraph master narrative for executive presentations, (3) A 'what changes' summary for the sales team.",
+  before_after: "Show GSTV's positioning shift as a clear before/after. For 6 key narrative moments — opening claim, format description, audience definition, measurement story, competitive differentiation, and call to action — show the OLD language vs the NEW language. Make the contrast stark and the improvement obvious.",
+  hooks: "Define GSTV's core hooks and sales angles. For each of 4 contexts produce 3 hooks: (1) Agency planning meeting, (2) Brand CMO pitch, (3) Retail media conversation, (4) Performance/outcomes brief. Each hook must lead with a buyer problem not a GSTV feature, be 1-2 sentences, and create immediate relevance.",
+  messaging_arch: "Build GSTV's messaging architecture. Structure: (1) Master claim (one sentence), (2) Three messaging pillars — name, 1-sentence statement, 2-3 proof points each, (3) Narrative logic connecting the pillars, (4) One-page messaging hierarchy described in text.",
+  category_messaging: "Produce category-specific messaging cards for GSTV's five priority verticals. For each vertical — QSR, Retail, CPG, Financial Services, Auto — produce a sales-ready card with: (1) Category-specific hook, (2) Most relevant GSTV value claim, (3) 3 talking points, (4) Most likely objection and one-line rebuttal.",
+  objections: "Build GSTV's objection handling framework. Cover 10 objections across: CTV equivalence, measurement, reach and scale, price/value, category relevance, audience quality, and competitive alternatives. For each: THE REFRAME, THE REBUTTAL, THE ASK.",
+  stresstest: "Stress-test GSTV's outcomes-led narrative against 5 realistic media brief scenarios: (1) QSR brand shifting 20% to performance, (2) CPG brand building retail media allocation, (3) Agency consolidating video buys to 3 platforms, (4) Auto brand focused on incremental reach, (5) Financial services running outcome-based awareness. For each: how well the narrative answers the brief, where it falls short, what refinement is needed.",
+  narrative_v2: "Produce GSTV Narrative v2 — optimized for sales field use. Short sentences, commercial language, structure a rep can follow in 10 minutes: (1) Opening — 1-2 sentences, (2) The problem we solve, (3) Three claims with proof points, (4) The ask. Add a 'sales rep notes' section on adapting for different buyer types.",
+  final_narrative: "Write GSTV's board-ready master narrative document. Structure: exec summary, definitive value proposition, full narrative arc, messaging architecture summary, category variants overview, and operationalization note for the sales team. Write in polished executive language throughout.",
+  package: "Prepare the final GSTV x Prosper deliverables pack for sign-off. Produce: (1) Table of contents with one-sentence descriptions of all deliverables, (2) Exec summary cover page synthesizing the journey from diagnosis to final narrative, (3) 10-point handoff and activation plan for GSTV's sales and marketing teams.",
+  evidence_bank: "Build GSTV's evidence bank across three categories: (1) ATTENTION — environment quality vs other video contexts, data available, how to frame for buyers, (2) PROXIMITY TO PURCHASE — fuel and convenience retail context and commercial relevance, (3) OUTCOMES — retail lift, brand impact, sales correlation. For each, produce a ready-to-use proof point in sales language.",
+  verticals: "Identify and prioritize GSTV's target verticals from: QSR, Retail, CPG, Financial Services, Auto. For each: (1) strategic fit with GSTV's context, (2) current budget trends in video, (3) how the outcomes-led narrative lands for that buyer, (4) speed to revenue potential. Produce a ranked list with rationale and a one-paragraph targeting strategy.",
+  feedback_loop: "Design the 48-hour client feedback integration loop. Produce: (1) Feedback intake form — 6 questions for capturing GSTV reactions to drafts, (2) Classification system — directional, tactical, out of scope, (3) Version control naming convention, (4) Weekly sync agenda template."
+};
+
+/* ── File store ── */
+const fileStore = {};
+
+function addFiles(input, taskId) {
+  if (!fileStore[taskId]) fileStore[taskId] = [];
+  Array.from(input.files).forEach(f => {
+    if (!fileStore[taskId].find(x => x.name === f.name)) fileStore[taskId].push(f);
+  });
+  renderFileChips(taskId);
+  input.value = '';
+}
+
+function dropFiles(event, taskId) {
+  event.preventDefault();
+  dragLeave('uz-' + taskId);
+  if (!fileStore[taskId]) fileStore[taskId] = [];
+  Array.from(event.dataTransfer.files).forEach(f => {
+    if (!fileStore[taskId].find(x => x.name === f.name)) fileStore[taskId].push(f);
+  });
+  renderFileChips(taskId);
+}
+
+function dragOver(event, zoneId) { event.preventDefault(); document.getElementById(zoneId).classList.add('drag-over'); }
+function dragLeave(zoneId) { document.getElementById(zoneId).classList.remove('drag-over'); }
+
+function removeFile(taskId, name) {
+  fileStore[taskId] = fileStore[taskId].filter(f => f.name !== name);
+  renderFileChips(taskId);
+}
+
+function renderFileChips(taskId) {
+  const fl = document.getElementById('fl-' + taskId);
+  if (!fl) return;
+  fl.innerHTML = (fileStore[taskId] || []).map(f =>
+    `<div class="file-chip">${f.name}<span class="file-chip-remove" onclick="removeFile('${taskId}','${f.name}')">✕</span></div>`
+  ).join('');
+}
+
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve({ name: file.name, content: e.target.result });
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+/* ── Audit runners ── */
+async function runAuditPerDoc(taskId, btn) {
+  const files = fileStore[taskId] || [];
+  if (!files.length) { alert('Drop at least one document into the upload zone first.'); return; }
+  const rp = document.getElementById('rp-' + taskId);
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = 'Reading files...';
+  setLoading(rp, 'Per-Document Analysis');
+  try {
+    const docs = await Promise.all(files.map(readFile));
+    btn.textContent = 'Running...';
+    const docSection = docs.map((d, i) => `DOCUMENT ${i+1}: ${d.name}\n---\n${d.content.slice(0, 6000)}`).join('\n\n');
+    const prompt = `You are a senior GTM strategist at Prosper and Partners conducting a rigorous audit of GSTV's current marketing and sales materials. You have been given ${docs.length} document(s). Your job is to produce a PRECISE, SUBSTANTIVE analysis — not a surface summary.
+
+CRITICAL RULES:
+- Do NOT use a Strengths/Weaknesses framework. Analyse, diagnose, and assess.
+- You MUST quote or directly reference specific content, data points, language, or figures from each document to substantiate every analytical claim you make. If a document contains numbers, name them. If it contains specific language or claims, quote them. Do not generalise.
+- Write with the commercial sharpness of a senior consultant presenting findings to a CEO. No filler, no hedging.
+
+For EACH document produce analysis under these headings:
+
+DOCUMENT [N]: [filename]
+WHAT THIS IS: One sentence on document type and purpose.
+ANALYSIS: A substantive 3-5 paragraph analysis of the document's content, narrative, data and commercial logic. Reference specific extracts, metrics, language or structural choices from the document. Assess what the document reveals about GSTV's current GTM posture — what it is saying, how it is saying it, and where the logic breaks down or falls short of what is needed.
+GTM IMPLICATIONS: 3-5 specific, actionable implications for the GTM engagement. Each implication should be grounded in something specific you found in the document. These are not generic observations — they are direct inputs into the Phase 1 diagnosis.
+
+After all per-document analyses, produce:
+
+CROSS-DOCUMENT PATTERNS
+A 3-4 paragraph synthesis identifying the most important themes and patterns across all materials. What does the totality of these documents reveal about GSTV's GTM posture, commercial mindset and readiness for the strategic pivot? Cite specific evidence from multiple documents to support each pattern you identify.`;
+    const data = await callAPI(prompt, CTX + '\n\nDOCUMENTS:\n' + docSection);
+    setResult(rp, 'Per-Document Analysis', data.text);
+  } catch(e) { setError(rp, e.message); }
+  btn.disabled = false; btn.textContent = origText;
+}
+
+async function runAuditConsolidated(taskId, btn) {
+  const files = fileStore[taskId] || [];
+  if (!files.length) { alert('Drop at least one document into the upload zone first.'); return; }
+  const rp = document.getElementById('rp-' + taskId);
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = 'Reading files...';
+  setLoading(rp, 'Consolidated Audit');
+  try {
+    const docs = await Promise.all(files.map(readFile));
+    btn.textContent = 'Running...';
+    const docSection = docs.map((d, i) => `DOCUMENT ${i+1}: ${d.name}\n---\n${d.content.slice(0, 5000)}`).join('\n\n');
+    const prompt = `You are a senior GTM strategist at Prosper and Partners. You have reviewed ${docs.length} GSTV document(s). Produce a CONSOLIDATED GTM AUDIT PAPER — a professional-grade strategic document that will be shared with GSTV's executive team (Scott and Rob) and used as the primary Phase 1 diagnostic input.
+
+CRITICAL RULES:
+- Every analytical claim must be substantiated by specific evidence from the documents — quote language, cite data, reference specific slides, figures or structural choices.
+- Write as a senior consultant, not as a summariser. Diagnose, challenge and provoke. This document should make GSTV's leadership uncomfortable in a productive way.
+- No bullet-point lists in the body sections. Write in rigorous analytical prose.
+
+Structure the paper as follows:
+
+EXECUTIVE SUMMARY
+2-3 paragraphs. The overall state of GSTV's GTM as revealed by this audit. What is the headline finding? What is at stake if nothing changes? Ground this in specific evidence.
+
+THE CURRENT NARRATIVE: WHAT GSTV IS SAYING AND WHY IT IS NOT WORKING
+A detailed assessment of the story GSTV is currently telling across its materials. What claims is it making? What language is it using? Where does this narrative break down against the market realities of CTV supply glut, outcome-based buying, and the rise of retail media? Quote specific language from the documents.
+
+COMMERCIAL AND OPERATIONAL ALIGNMENT
+An assessment of how well GSTV's internal operations, org structure, sales processes and metrics align with (or contradict) the strategic direction required. What do the data, dashboards and org chart reveal about GSTV's commercial readiness for the pivot? Be specific.
+
+THE FIVE MOST IMPORTANT FINDINGS
+Five numbered findings — each a precise, evidenced diagnostic statement. Each finding should be 2-3 sentences: the finding itself, the evidence for it from the documents, and why it matters for the GTM engagement.
+
+PHASE 1 PRIORITIES: WHAT THIS AUDIT TELLS US TO DO FIRST
+3-4 paragraphs on what the audit reveals as the most urgent priorities for the Prosper engagement. This is not a generic recommendation list — it is a direct bridge from audit findings to engagement priorities, grounded in what the documents specifically reveal.`;
+    const data = await callAPI(prompt, CTX + '\n\nDOCUMENTS:\n' + docSection);
+    setResult(rp, 'Consolidated Audit Paper', data.text);
+  } catch(e) { setError(rp, e.message); }
+  btn.disabled = false; btn.textContent = origText;
+}
+
+/* ── Outlook pre-fill ── */
+function openOutlook(type) {
+  const subjects = {
+    sales_outreach: 'GSTV GTM Project — Interview Request (30 mins)',
+    buyer_outreach: 'Media Planning Research — Brief Interview Request (30 mins)'
+  };
+  const bodies = {
+    sales_outreach: `Hi [Name],\n\nI'm reaching out as part of a project we're running with GSTV to refresh their go-to-market strategy. As someone on the sales team, your perspective on what's working in market — and where you feel under-equipped — would be incredibly valuable.\n\nI'd love 30 minutes of your time for a candid conversation. We'll send a short discussion guide ahead of the call.\n\nWould [DATE/TIME] work for you?\n\nWarren Griffiths and Jason Levin\nProsper and Partners`,
+    buyer_outreach: `Hi [Name],\n\nI'm conducting research on how agencies and brand teams are evaluating video and retail media channels right now. Your perspective would be really valuable — this is independent research, not a sales conversation.\n\nWould you have 30 minutes for a candid discussion? I'll send a short discussion guide in advance.\n\nWould [DATE/TIME] work?\n\nJason Levin\nProsper and Partners`
+  };
+  const subject = encodeURIComponent(subjects[type] || '');
+  const body = encodeURIComponent(bodies[type] || '');
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+/* ── API call ── */
+async function callAPI(prompt, context) {
+  const res = await fetch('/api/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, context })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/* ── UI helpers ── */
+function setLoading(paneEl, label) {
+  paneEl.innerHTML = `<div class="result-header"><span class="result-label">${label}</span><div class="result-actions"></div></div><div class="result-body"><div class="loading-wrap"><div class="spinner"></div><span class="loading-text">Running — typically 15–30 seconds...</span></div></div>`;
+  paneEl.classList.add('visible');
+}
+
+function setResult(paneEl, label, text) {
+  const id = 'res-' + Date.now();
+  // Store raw text on element for clean copy
+  const rendered = renderMarkdown(text);
+  paneEl.innerHTML = `<div class="result-header"><span class="result-label">${label}</span><div class="result-actions"><button class="btn btn-copy-sm" onclick="copyResult('${id}',this)">Copy</button><button class="result-close" onclick="closeResult(this)">✕</button></div></div><div class="result-body"><div class="result-text" id="${id}" data-raw="${escHtml(text)}">${rendered}</div></div>`;
+}
+
+function setError(paneEl, msg) {
+  const body = paneEl.querySelector('.result-body');
+  if (body) body.innerHTML = `<div class="error-text">${escHtml(msg)}</div>`;
+}
+
+async function runTask(taskId, promptKey, btn) {
+  const rp = document.getElementById('rp-' + taskId);
+  const prompt = taskPrompts[promptKey];
+  if (!prompt) return;
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Running...';
+  setLoading(rp, origText);
+  try {
+    const data = await callAPI(prompt, CTX);
+    setResult(rp, origText, data.text);
+  } catch(e) { setError(rp, e.message); }
+  btn.disabled = false; btn.textContent = origText;
+}
+
+function closeResult(btn) {
+  const pane = btn.closest('.result-pane');
+  pane.classList.remove('visible'); pane.innerHTML = '';
+}
+
+function copyResult(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  // Copy raw markdown text, not rendered HTML
+  const raw = el.dataset.raw || el.textContent;
+  navigator.clipboard.writeText(raw).then(() => {
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderMarkdown(raw) {
+  // 1. Escape HTML entities
+  let t = escHtml(raw);
+  // 2. Headings — must run before bold so ### isn't caught by **
+  t = t.replace(/^#{4}\s+(.+)$/gm, '<span class="rh3">$1</span>');
+  t = t.replace(/^#{3}\s+(.+)$/gm, '<span class="rh3">$1</span>');
+  t = t.replace(/^#{2}\s+(.+)$/gm, '<span class="rh2">$1</span>');
+  t = t.replace(/^#{1}\s+(.+)$/gm, '<span class="rh1">$1</span>');
+  // 3. ALL-CAPS lines (e.g. EXECUTIVE SUMMARY) treated as h2
+  t = t.replace(/^([A-Z][A-Z\s\(\):\/\-]{6,})$/gm, '<span class="rh2">$1</span>');
+  // 4. Bold: **text**
+  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // 5. Italic: *text*
+  t = t.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+  // 6. Newlines → <br>, then wrap consecutive non-tag lines in <p>
+  t = t.replace(/\n{2,}/g, '</p><p>');
+  t = t.replace(/\n/g, '<br>');
+  t = '<p>' + t + '</p>';
+  // 7. Clean up empty paragraphs
+  t = t.replace(/<p>\s*<\/p>/g, '');
+  return t;
+}
+
+function showPanel(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+function toggleTask(id) {
+  const card = document.getElementById('tc-' + id);
+  const check = card.querySelector('.task-check');
+  card.classList.toggle('done');
+  check.classList.toggle('checked', card.classList.contains('done'));
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = 19;
+  const done = document.querySelectorAll('.task-card.done').length;
+  const pct = Math.round((done / total) * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = done + ' of ' + total + ' tasks complete';
+  document.getElementById('prog-pct').textContent = pct + '%';
+}
+</script>
+</body>
+</html>
