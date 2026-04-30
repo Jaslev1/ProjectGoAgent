@@ -124,6 +124,29 @@
   .result-text p { margin-bottom: 10px; }
   .result-text br + br { display: none; }
 
+  /* ── Follow-up bar ── */
+  .followup-bar { display: flex; gap: 8px; align-items: flex-start; padding: 10px 14px; border-top: 1px solid var(--lime-pale); background: #fafcf5; }
+  .followup-input { flex: 1; border: 1px solid var(--grey-border); border-radius: 6px; padding: 7px 10px; font-size: 11px; font-family: inherit; color: var(--navy); background: var(--white); resize: vertical; min-height: 34px; max-height: 120px; line-height: 1.5; transition: border-color 0.15s; }
+  .followup-input:focus { outline: none; border-color: var(--teal); }
+  .followup-input::placeholder { color: var(--brown-light); }
+  .btn-ask { background: var(--teal); color: #fff; white-space: nowrap; flex-shrink: 0; }
+  .btn-ask:hover { background: var(--teal-dark); }
+  .btn-ask:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Follow-up thread ── */
+  .followup-chain { border-top: 1px solid var(--grey-border); }
+  .followup-turn { padding: 12px 14px; border-bottom: 1px solid #f0f0ec; }
+  .followup-turn:last-child { border-bottom: none; }
+  .followup-q { font-size: 11px; font-weight: 700; color: var(--navy-mid); margin-bottom: 8px; padding: 5px 9px; background: #ece9f5; border-radius: 5px; }
+  .followup-q::before { content: 'You: '; font-weight: 800; color: var(--navy); }
+  .followup-a { font-size: 12px; line-height: 1.8; color: var(--navy); }
+  .followup-a strong { font-weight: 700; }
+  .followup-a .rh1 { font-size: 13px; font-weight: 800; color: var(--navy); display: block; margin-top: 14px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .followup-a .rh2 { font-size: 12px; font-weight: 800; color: var(--navy-mid); display: block; margin-top: 10px; margin-bottom: 3px; }
+  .followup-a .rh3 { font-size: 12px; font-weight: 700; color: var(--teal-dark); display: block; margin-top: 8px; margin-bottom: 3px; }
+  .followup-a p { margin-bottom: 8px; }
+  .followup-copy { margin-top: 6px; }
+
   .loading-wrap { display: flex; align-items: center; gap: 9px; padding: 18px 0; }
   .spinner { width: 16px; height: 16px; border: 2px solid var(--grey-border); border-top-color: var(--navy-mid); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -1022,9 +1045,23 @@ function setLoading(paneEl, label) {
 
 function setResult(paneEl, label, text) {
   const id = 'res-' + Date.now();
-  resultStore[id] = text; // store raw text in JS object — no attribute truncation
+  const taskId = (paneEl.id || '').replace('rp-', ''); // e.g. 'rp-t2' → 't2'
+  resultStore[id] = text;
   const rendered = renderMarkdown(text);
-  paneEl.innerHTML = `<div class="result-header"><span class="result-label">${label}</span><div class="result-actions"><button class="btn btn-copy-sm" onclick="copyResult('${id}',this)">Copy</button><button class="result-close" onclick="closeResult(this)">✕</button></div></div><div class="result-body"><div class="result-text" id="${id}">${rendered}</div></div>`;
+  paneEl.innerHTML = `
+    <div class="result-header">
+      <span class="result-label">${label}</span>
+      <div class="result-actions">
+        <button class="btn btn-copy-sm" onclick="copyResult('${id}',this)">Copy</button>
+        <button class="result-close" onclick="closeResult(this)">✕</button>
+      </div>
+    </div>
+    <div class="result-body"><div class="result-text" id="${id}">${rendered}</div></div>
+    <div class="followup-bar">
+      <textarea class="followup-input" placeholder="Probe deeper, challenge a finding, request a reframe, ask for a specific extract..." onkeydown="followupKey(event,'${id}','${taskId}',this)"></textarea>
+      <button class="btn btn-ask" onclick="runFollowUp('${id}','${taskId}',this)">Ask</button>
+    </div>
+    <div class="followup-chain" id="fc-${id}"></div>`;
 }
 
 function setError(paneEl, msg) {
@@ -1049,6 +1086,85 @@ async function runTask(taskId, promptKey, btn) {
 function closeResult(btn) {
   const pane = btn.closest('.result-pane');
   pane.classList.remove('visible'); pane.innerHTML = '';
+}
+
+/* ── Follow-up thread ── */
+function followupKey(event, resultId, taskId, textarea) {
+  // Cmd/Ctrl + Enter submits
+  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+    event.preventDefault();
+    const btn = textarea.nextElementSibling;
+    if (!btn.disabled) runFollowUp(resultId, taskId, btn);
+  }
+}
+
+async function runFollowUp(resultId, taskId, btn) {
+  const bar = btn.closest('.followup-bar');
+  const textarea = bar.querySelector('.followup-input');
+  const question = textarea.value.trim();
+  if (!question) { textarea.focus(); return; }
+
+  const chain = document.getElementById('fc-' + resultId);
+  if (!chain) return;
+
+  // Build the turn UI immediately
+  const turnId = 'ft-' + Date.now();
+  const turnEl = document.createElement('div');
+  turnEl.className = 'followup-turn';
+  turnEl.innerHTML = `
+    <div class="followup-q">${escHtml(question)}</div>
+    <div class="followup-a" id="${turnId}">
+      <div class="loading-wrap"><div class="spinner"></div><span class="loading-text">Running...</span></div>
+    </div>`;
+  chain.appendChild(turnEl);
+  turnEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  btn.disabled = true;
+  textarea.value = '';
+
+  try {
+    // Context = prior analysis + any uploaded docs for this task
+    const priorAnalysis = resultStore[resultId] || '';
+
+    // Collect all prior follow-up exchanges for this thread
+    const priorTurns = [];
+    chain.querySelectorAll('.followup-turn').forEach(t => {
+      const q = t.querySelector('.followup-q');
+      const a = t.querySelector('.followup-a');
+      if (q && a && a.id !== turnId) {
+        const aText = resultStore[a.id] || a.innerText || '';
+        priorTurns.push(`User: ${q.textContent.replace(/^You: /, '')}\nAgent: ${aText}`);
+      }
+    });
+
+    let context = `ORIGINAL ANALYSIS:\n${priorAnalysis}`;
+    if (priorTurns.length) context += `\n\nPRIOR FOLLOW-UP EXCHANGES:\n${priorTurns.join('\n\n')}`;
+
+    // Include source docs if available for this task
+    const files = fileStore[taskId] || [];
+    if (files.length) {
+      try {
+        const docs = await Promise.all(files.map(readFile));
+        const docSection = docs.map((d, i) => `DOCUMENT ${i+1}: ${d.name}\n---\n${d.content.slice(0, 8000)}`).join('\n\n');
+        context += `\n\nSOURCE DOCUMENTS:\n${docSection}`;
+      } catch(e) { /* doc re-read failed — proceed without */ }
+    }
+
+    const prompt = `You are continuing a GTM analysis session. The user has a follow-up question or instruction based on the original analysis and any prior exchanges provided in context. Address it directly, specifically, and with reference to the source documents where relevant. Apply the same analytical standards as the original analysis — evidence-led, no assumed narratives, no generic consulting language.\n\nFOLLOW-UP: ${question}`;
+
+    const data = await callAPI(prompt, context);
+    const aEl = document.getElementById(turnId);
+    resultStore[turnId] = data.text;
+    aEl.innerHTML = renderMarkdown(data.text) +
+      `<button class="btn btn-copy-sm followup-copy" onclick="copyResult('${turnId}',this)">Copy</button>`;
+
+  } catch(e) {
+    const aEl = document.getElementById(turnId);
+    if (aEl) aEl.innerHTML = `<div class="error-text">${escHtml(e.message)}</div>`;
+  }
+
+  btn.disabled = false;
+  textarea.focus();
 }
 
 function stripMarkdown(raw) {
