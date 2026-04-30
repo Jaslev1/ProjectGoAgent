@@ -882,14 +882,16 @@ async function runAuditPerDoc(taskId, btn) {
   try {
     const docs = await Promise.all(files.map(readFile));
     btn.textContent = 'Running...';
-    const docSection = docs.map((d, i) => `DOCUMENT ${i+1}: ${d.name}\n---\n${d.content.slice(0, 6000)}`).join('\n\n');
+    const docSection = docs.map((d, i) => `DOCUMENT ${i+1}: ${d.name}\n---\n${d.content.slice(0, 10000)}`).join('\n\n');
     const prompt = `You are a senior GTM strategist at Prosper and Partners conducting a rigorous audit of GSTV's current marketing and sales materials. You have been given ${docs.length} document(s). Your job is to produce a PRECISE, SUBSTANTIVE analysis — not a surface summary.
 
 CRITICAL RULES:
 - Do NOT use a Strengths/Weaknesses framework. Analyse, diagnose, and assess.
-- You MUST quote or directly reference specific content, data points, language, or figures from each document to substantiate every analytical claim you make. If a document contains numbers, name them. If it contains specific language or claims, quote them. Do not generalise.
-- HALLUCINATION RULE: If a document's content appears empty, garbled, binary, or unreadable — state that clearly and explicitly under that document's heading. Do NOT fabricate plausible-sounding analysis. Write: "Document content could not be read — no analysis possible. Please re-upload as a text-readable file." and move on.
-- Write with the commercial sharpness of a senior consultant presenting findings to a CEO. No filler, no hedging.
+- EVIDENCE RULE: Every analytical claim must cite its source in the document — a direct quote, a specific figure, a named section, a structural observation. If you cannot point to something specific in the text, do not make the claim. Write "the document states..." or "the language used is..." not "it appears that..." or "this suggests a culture of...".
+- NO ASSUMED NARRATIVES: Do not project macro-market framing (CTV saturation, retail media trends, outcome-based buying) onto the documents unless those concepts explicitly appear in the text. Analyse what is actually in front of you.
+- LANGUAGE BAN: The following are banned — "foster a culture", "embrace innovation", "dynamic landscape", "evolving market conditions", "proactive approach", "drives synergies", "leverage capabilities", "accelerate growth", "ensure alignment". Replace any such phrase with a specific, evidenced observation.
+- HALLUCINATION RULE: If a document's content appears empty, garbled or unreadable — state that clearly. Do NOT fabricate plausible-sounding analysis. Write: "Document content could not be read — no analysis possible." and move on.
+- Write as a diagnostician. Identify what is actually there — including gaps, contradictions, weak logic and missing evidence — rather than endorsing the client's own narrative back at them.
 
 For EACH document produce analysis under these headings:
 
@@ -919,13 +921,15 @@ async function runAuditConsolidated(taskId, btn) {
   try {
     const docs = await Promise.all(files.map(readFile));
     btn.textContent = 'Running...';
-    const docSection = docs.map((d, i) => `DOCUMENT ${i+1}: ${d.name}\n---\n${d.content.slice(0, 5000)}`).join('\n\n');
+    const docSection = docs.map((d, i) => `DOCUMENT ${i+1}: ${d.name}\n---\n${d.content.slice(0, 10000)}`).join('\n\n');
     const prompt = `You are a senior GTM strategist at Prosper and Partners. You have reviewed ${docs.length} GSTV document(s). Produce a CONSOLIDATED GTM AUDIT PAPER — a professional-grade strategic document that will be shared with GSTV's executive team (Scott and Rob) and used as the primary Phase 1 diagnostic input.
 
 CRITICAL RULES:
-- Every analytical claim must be substantiated by specific evidence from the documents — quote language, cite data, reference specific slides, figures or structural choices.
-- HALLUCINATION RULE: If any document's content is empty, garbled or unreadable, acknowledge it explicitly (e.g. "Document 3 could not be read and has been excluded from this analysis"). Do NOT fabricate content for any document.
-- Write as a senior consultant, not as a summariser. Diagnose, challenge and provoke. This document should make GSTV's leadership uncomfortable in a productive way.
+- EVIDENCE RULE: Every analytical claim must be traceable to something specific in the documents — a direct quote, a named figure, a specific data point, a structural or language choice you observed. Do not make claims you cannot source to the actual text.
+- NO ASSUMED NARRATIVES: Do not project macro-market framing onto the documents unless that framing explicitly appears in the material. Do not assume GSTV is failing or succeeding — read what the documents actually show.
+- LANGUAGE BAN: The following phrases and their variants are banned — "foster a culture", "embrace innovation", "dynamic landscape", "evolving market conditions", "proactive approach", "drives synergies", "leverage capabilities", "accelerate growth", "ensure alignment". Every instance of these must be replaced with a specific, evidenced claim.
+- HALLUCINATION RULE: If any document's content is empty, garbled or unreadable, state that explicitly and exclude it. Do NOT fabricate content.
+- Write as a diagnostician, not a cheerleader or a doom-sayer. The goal is an honest, evidence-led read of what these documents reveal. Challenge the client's own narrative where the evidence warrants it.
 - No bullet-point lists in the body sections. Write in rigorous analytical prose.
 
 Structure the paper as follows:
