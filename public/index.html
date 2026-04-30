@@ -6,6 +6,7 @@
 <title>GSTV x Prosper — GTM Agent</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -215,9 +216,9 @@
 
       <!-- File upload zone -->
       <div class="upload-zone" id="uz-t2" onclick="document.getElementById('fi-t2').click()" ondragover="dragOver(event,'uz-t2')" ondragleave="dragLeave('uz-t2')" ondrop="dropFiles(event,'t2')">
-        <input type="file" id="fi-t2" multiple accept=".txt,.md,.csv,.pdf,.xlsx,.xls" onchange="addFiles(this,'t2')">
+        <input type="file" id="fi-t2" multiple accept=".txt,.md,.csv,.pdf,.xlsx,.xls,.pptx,.ppt" onchange="addFiles(this,'t2')">
         <div class="upload-zone-label">Drop documents here or click to browse</div>
-        <div class="upload-zone-sub">Supported: .pdf, .xlsx, .csv, .txt, .md — text extracted automatically from all formats</div>
+        <div class="upload-zone-sub">Supported: .pdf, .pptx, .xlsx, .csv, .txt, .md — text extracted automatically from all formats</div>
         <div class="file-list" id="fl-t2"></div>
       </div>
 
@@ -730,6 +731,9 @@ if (typeof pdfjsLib !== 'undefined') {
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
+/* ── Result store (avoids data-raw attribute truncation on long/quoted text) ── */
+const resultStore = {};
+
 /* ── File store ── */
 const fileStore = {};
 
@@ -813,6 +817,43 @@ function readFile(file) {
           resolve({ name: file.name, content: text.trim() || '[Excel file loaded but no data could be extracted — workbook may be empty.]' });
         } catch (err) {
           reject(new Error(`Excel parse error (${file.name}): ${err.message}`));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  // PPTX / PPT: use JSZip to unpack, then extract text from slide XML
+  if (name.endsWith('.pptx') || name.endsWith('.ppt')) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async e => {
+        try {
+          const zip = await JSZip.loadAsync(e.target.result);
+          // Slides live at ppt/slides/slide1.xml, slide2.xml, …
+          const slideKeys = Object.keys(zip.files)
+            .filter(k => /^ppt\/slides\/slide\d+\.xml$/.test(k))
+            .sort((a, b) => {
+              const na = parseInt(a.match(/\d+/)[0]);
+              const nb = parseInt(b.match(/\d+/)[0]);
+              return na - nb;
+            });
+          if (!slideKeys.length) {
+            resolve({ name: file.name, content: '[PowerPoint loaded but no slide XML found — file may be corrupted or in legacy .ppt binary format. Re-save as .pptx and re-upload.]' });
+            return;
+          }
+          let text = '';
+          for (let i = 0; i < slideKeys.length; i++) {
+            const xml = await zip.files[slideKeys[i]].async('string');
+            // Extract text from <a:t> elements
+            const matches = [...xml.matchAll(/<a:t[^>]*>([^<]*)<\/a:t>/g)];
+            const slideText = matches.map(m => m[1]).filter(Boolean).join(' ').trim();
+            if (slideText) text += `[Slide ${i + 1}]\n${slideText}\n\n`;
+          }
+          resolve({ name: file.name, content: text.trim() || '[PowerPoint loaded but slides appear to contain no extractable text — may be image-only slides.]' });
+        } catch (err) {
+          reject(new Error(`PowerPoint parse error (${file.name}): ${err.message}`));
         }
       };
       reader.onerror = reject;
@@ -946,9 +987,9 @@ function setLoading(paneEl, label) {
 
 function setResult(paneEl, label, text) {
   const id = 'res-' + Date.now();
-  // Store raw text on element for clean copy
+  resultStore[id] = text; // store raw text in JS object — no attribute truncation
   const rendered = renderMarkdown(text);
-  paneEl.innerHTML = `<div class="result-header"><span class="result-label">${label}</span><div class="result-actions"><button class="btn btn-copy-sm" onclick="copyResult('${id}',this)">Copy</button><button class="result-close" onclick="closeResult(this)">✕</button></div></div><div class="result-body"><div class="result-text" id="${id}" data-raw="${escHtml(text)}">${rendered}</div></div>`;
+  paneEl.innerHTML = `<div class="result-header"><span class="result-label">${label}</span><div class="result-actions"><button class="btn btn-copy-sm" onclick="copyResult('${id}',this)">Copy</button><button class="result-close" onclick="closeResult(this)">✕</button></div></div><div class="result-body"><div class="result-text" id="${id}">${rendered}</div></div>`;
 }
 
 function setError(paneEl, msg) {
@@ -975,22 +1016,44 @@ function closeResult(btn) {
   pane.classList.remove('visible'); pane.innerHTML = '';
 }
 
-function copyResult(id, btn) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const raw = el.dataset.raw || el.textContent;
-  // Strip markdown symbols so copied text is clean plain text
-  const clean = raw
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\*\*(.+?)\*\*/gs, '$1')
-    .replace(/\*([^*\n]+?)\*/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/\n{3,}/g, '\n\n')
+function stripMarkdown(raw) {
+  return raw
+    .replace(/^#{1,6}\s+/gm, '')           // remove heading hashes
+    .replace(/\*\*([^*]+?)\*\*/g, '$1')    // **bold** — no s flag, stays per-line safe
+    .replace(/\*([^*\n]+?)\*/g, '$1')      // *italic*
+    .replace(/`([^`]+?)`/g, '$1')          // `code`
+    .replace(/\n{3,}/g, '\n\n')            // collapse excess blank lines
     .trim();
-  navigator.clipboard.writeText(clean).then(() => {
+}
+
+function copyResult(id, btn) {
+  // 1. Prefer raw text stored in JS object (no DOM attribute truncation)
+  // 2. Fall back to innerText of the rendered element (still clean, just no markdown cleanup)
+  const el = document.getElementById(id);
+  const raw = resultStore[id] || (el ? el.innerText : '');
+  if (!raw) { btn.textContent = 'Nothing to copy'; return; }
+  const clean = resultStore[id] ? stripMarkdown(raw) : raw;
+
+  function flash() {
     btn.textContent = 'Copied!'; btn.classList.add('copied');
     setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-  });
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(clean).then(flash).catch(() => execCopy(clean, flash));
+  } else {
+    execCopy(clean, flash);
+  }
+}
+
+function execCopy(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); cb(); } catch(e) { alert('Copy failed — please select and copy manually.'); }
+  document.body.removeChild(ta);
 }
 
 function escHtml(str) {
