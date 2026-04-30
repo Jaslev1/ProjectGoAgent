@@ -916,11 +916,12 @@ async function runAuditPerDoc(taskId, btn) {
 
 CRITICAL RULES:
 - Do NOT use a Strengths/Weaknesses framework. Analyse, diagnose, and assess.
-- EVIDENCE RULE: Every analytical claim must cite its source in the document — a direct quote, a specific figure, a named section, a structural observation. If you cannot point to something specific in the text, do not make the claim. Write "the document states..." or "the language used is..." not "it appears that..." or "this suggests a culture of...".
-- NO ASSUMED NARRATIVES: Do not project macro-market framing (CTV saturation, retail media trends, outcome-based buying) onto the documents unless those concepts explicitly appear in the text. Analyse what is actually in front of you.
-- LANGUAGE BAN: The following are banned — "foster a culture", "embrace innovation", "dynamic landscape", "evolving market conditions", "proactive approach", "drives synergies", "leverage capabilities", "accelerate growth", "ensure alignment". Replace any such phrase with a specific, evidenced observation.
-- HALLUCINATION RULE: If a document's content appears empty, garbled or unreadable — state that clearly. Do NOT fabricate plausible-sounding analysis. Write: "Document content could not be read — no analysis possible." and move on.
-- Write as a diagnostician. Identify what is actually there — including gaps, contradictions, weak logic and missing evidence — rather than endorsing the client's own narrative back at them.
+- VISION DOCUMENTS ARE NOT GROUND TRUTH: If a document describes a future state, aspirational CVP, or proposed strategy, treat it as a hypothesis to examine — not as a benchmark against which to measure current operations. Do not use any document's stated goals as a lens for criticising everything else. The vision itself is what this engagement is interrogating.
+- EVIDENCE RULE: Every analytical claim must cite its source — a direct quote, a specific figure, a named section, a structural observation. Write "the document states..." or "the language used is..." not "this suggests a culture of..." or "this indicates a failure to...".
+- NO ASSUMED NARRATIVES: Do not project macro-market framing (CTV saturation, retail media trends, outcome-based buying) unless those concepts explicitly appear in the document text.
+- LANGUAGE BAN: Banned — "foster a culture", "embrace innovation", "dynamic landscape", "evolving market conditions", "proactive approach", "drives synergies", "leverage capabilities", "accelerate growth", "ensure alignment". Replace with specific, evidenced observations.
+- BALANCE: Identify what is coherent and what is not, what is supported by evidence and what is not — without defaulting to crisis framing or endorsement.
+- HALLUCINATION RULE: If a document is unreadable, state that clearly. Do not fabricate content.
 
 For EACH document produce analysis under these headings:
 
@@ -954,12 +955,13 @@ async function runAuditConsolidated(taskId, btn) {
     const prompt = `You are a senior GTM strategist at Prosper and Partners. You have reviewed ${docs.length} GSTV document(s). Produce a CONSOLIDATED GTM AUDIT PAPER — a professional-grade strategic document that will be shared with GSTV's executive team (Scott and Rob) and used as the primary Phase 1 diagnostic input.
 
 CRITICAL RULES:
-- EVIDENCE RULE: Every analytical claim must be traceable to something specific in the documents — a direct quote, a named figure, a specific data point, a structural or language choice you observed. Do not make claims you cannot source to the actual text.
-- NO ASSUMED NARRATIVES: Do not project macro-market framing onto the documents unless that framing explicitly appears in the material. Do not assume GSTV is failing or succeeding — read what the documents actually show.
-- LANGUAGE BAN: The following phrases and their variants are banned — "foster a culture", "embrace innovation", "dynamic landscape", "evolving market conditions", "proactive approach", "drives synergies", "leverage capabilities", "accelerate growth", "ensure alignment". Every instance of these must be replaced with a specific, evidenced claim.
-- HALLUCINATION RULE: If any document's content is empty, garbled or unreadable, state that explicitly and exclude it. Do NOT fabricate content.
-- Write as a diagnostician, not a cheerleader or a doom-sayer. The goal is an honest, evidence-led read of what these documents reveal. Challenge the client's own narrative where the evidence warrants it.
-- No bullet-point lists in the body sections. Write in rigorous analytical prose.
+- VISION DOCUMENTS ARE NOT GROUND TRUTH: If a document describes a future state, aspirational CVP or proposed strategic direction, treat it as a hypothesis — not as a benchmark. Do not use any document's stated ambitions as a frame for criticising the current state. The proposed vision is itself part of what this engagement must interrogate and validate.
+- EVIDENCE RULE: Every analytical claim must be traceable to something specific in the documents — a direct quote, a named figure, a structural observation. Do not make claims you cannot source to the actual text.
+- NO ASSUMED NARRATIVES: Do not project macro-market framing unless it appears explicitly in the material.
+- LANGUAGE BAN: Banned phrases — "foster a culture", "embrace innovation", "dynamic landscape", "evolving market conditions", "proactive approach", "drives synergies", "leverage capabilities", "accelerate growth", "ensure alignment". Replace with specific, evidenced observations.
+- BALANCE: Read what is actually there. Note what is coherent, what is contradictory, what is well-evidenced and what is asserted without support — without defaulting to crisis framing or strategic endorsement.
+- HALLUCINATION RULE: If any document is unreadable, state that explicitly and exclude it. Do not fabricate content.
+- No bullet-point lists in body sections. Write in rigorous analytical prose.
 
 Structure the paper as follows:
 
